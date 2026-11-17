@@ -6,6 +6,7 @@ from src.config.database import Session
 from src.config.settings import REDIS_URL
 from src.models.entities import Recovery
 from src.services.wal_engine import recover
+from src.services.recovery_service import snapshot_scenario
 redis = Redis.from_url(REDIS_URL)
 logging.basicConfig(level=logging.INFO)
 # Redis leadership lock ensures only one worker processes the durable DB queue.
@@ -19,7 +20,9 @@ while True:
                 if job:
                     job.status = 'running'
                     try:
-                        job.result = recover(job.snapshot['log_set']['initial'],job.snapshot['log_set']['records'],job.snapshot['case']['crash_after'])
+                        snapshot = job.snapshot or {}
+                        job.result = recover(snapshot['log_set']['initial'], snapshot['log_set']['records'],
+                                             **snapshot_scenario(snapshot))
                         job.status = 'completed'
                     except ValueError as exc:
                         job.result = {'error': str(exc), 'simulation': True}

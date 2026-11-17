@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from sqlalchemy import String, Integer, JSON, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 from src.config.database import Base
@@ -22,7 +22,15 @@ class CrashCase(Base):
     id: Mapped[int]=mapped_column(primary_key=True)
     log_set_id: Mapped[int]=mapped_column(ForeignKey('log_sets.id'))
     name: Mapped[str]=mapped_column(String(100),unique=True)
+    # Legacy crash point; for old rows executed_through/log_flushed_through are NULL
+    # and the same value is used with the no-force page rule.
     crash_after: Mapped[int]=mapped_column(Integer)
+    executed_through: Mapped[int | None]=mapped_column(Integer,nullable=True)
+    log_flushed_through: Mapped[int | None]=mapped_column(Integer,nullable=True)
+    # {key: lsn} page write-back moments; NULL on legacy rows.
+    page_flushes: Mapped[dict | None]=mapped_column(JSON,nullable=True)
+    # Frozen legal on-disk image: {'values': {...}, 'page_lsn': {...}, ...}
+    page_image: Mapped[dict | None]=mapped_column(JSON,nullable=True)
 class Recovery(Base):
     __tablename__='recoveries'
     id: Mapped[int]=mapped_column(primary_key=True)
